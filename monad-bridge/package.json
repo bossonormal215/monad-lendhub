@@ -1,0 +1,40 @@
+{
+  "name": "monad-bridge",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "npx hardhat compile",
+    "deploy-monad": "npx hardhat run scripts/deploy-dmon-nft.js --network monadDevNet",
+    "deploy-mon": "npx hardhat run scripts/deploy-mon.js --network monadDevNet",
+    "deploy-monad-pyth": "npx hardhat run scripts/deploy-monad-with-pyth.js --network monadDevNet ",
+    "check-status": "npx hardhat run scripts/interaction/check.js --network monadDevNet",
+    "mint": "npx hardhat run scripts/interaction/mint.js --network monadDevNet",
+    "whitelist-mint": "npx hardhat run scripts/interaction/pythmint.js --network monadDevNet",
+    "test1": "npx hardhat test",
+    "whitelist": "npx hardhat run scripts/interaction/whitelist.js --network monadDevNet",
+    "open-presale": "npx hardhat run scripts/interaction/open-whitelist-mint.js --network monadDevNet",
+    "update-price-data": "npx hardhat run scripts/interaction/updatePriceFeed.js --network monadDevNet",
+    "deploy-gmonadtoken": "npx hardhat run scripts/deploygmonadToken.js --network monadDevNet",
+    "deploy-mock-cont": "npx hardhat run scripts/deploy-bd.js --network monadDevNet",
+    "transfer": "npx hardhat run scripts/token-interaction/transfer.js --network monadDevNet"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "chai": "^4.5.0",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "hardhat": "^2.22.18"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.6.0",
+    "@pythnetwork/pyth-sdk-solidity": "^4.0.0",
+    "axios": "^1.7.9",
+    "fs": "^0.0.1-security"
+  }
+}
