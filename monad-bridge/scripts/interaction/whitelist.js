@@ -10,6 +10,7 @@ async function main() {
     // '0x123...', // Replace with actual addresses
     '0xED42844Cd35d734fec3B65dF486158C443896b41',
     '0x65b372e0793B3B0fAF9F9F83E0FE84A18fc92419',
+    '0xB8232dcD45A5a2f1D2f1D73e04D00740c1911Ee2',
   ];
 
   console.log('Adding addresses to whitelist...');

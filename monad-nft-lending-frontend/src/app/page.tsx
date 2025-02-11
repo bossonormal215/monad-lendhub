@@ -18,6 +18,7 @@ import { WhitelistedNFTs } from '../components/WhitelistedNFTs';
 import { BorrowForm } from '../components/BorrowForm';
 import { LiquidityProvider } from '../components/LiquidityProvider';
 import { LoanManager } from '../components/LoanManager';
+import MintDMONPage from '../app/mintdmon/page'
 
 // const activeChainId = parseInt(MONAD_DEVNET_CONFIG.chainId, 16);
 const activeChain = {
@@ -57,6 +58,8 @@ function App() {
       ]}
     >
       <Main />
+      <MintDMONPage />
+      
     </ThirdwebProvider>
 
 
@@ -438,6 +441,9 @@ function Main() {
           )}
         </div>
       )}
+
+      
+
     </div>
   );
 }

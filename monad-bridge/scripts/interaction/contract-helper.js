@@ -8,7 +8,8 @@ const DEPLOYED_CONTRACT_ADDRESS = '0xFd6E4CF0FC697236b359ac67701B8D1dFe82D301'; 
 async function getContract() {
   // No type annotations in JavaScript
   const contract = await ethers.getContractAt(
-    'GMonad', // Correct contract name the one with pyth
+    // 'GMonad', // Correct contract name the one with pyth
+    'DmonNFT',
     DEPLOYED_CONTRACT_ADDRESS
   );
   return contract;

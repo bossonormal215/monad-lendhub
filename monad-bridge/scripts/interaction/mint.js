@@ -6,7 +6,7 @@ async function main() {
 
   const [signer] = await ethers.getSigners(); // Get the signer (your account)
 
-  const quantity = 2; // Number of NFTs to mint
+  const quantity = 5; // Number of NFTs to mint
   const whitelistMintPrice = await contract.WhitelistMintPrice(); // Get the price
   // const totalMintPrice = whitelistMintPrice * BigInt(quantity);
   const totalMintPrice = whitelistMintPrice * BigInt(quantity);

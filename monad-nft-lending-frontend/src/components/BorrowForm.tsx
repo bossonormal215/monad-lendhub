@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { useContract, useAddress } from '@thirdweb-dev/react';
-import {  LOAN_MANAGER_CONTRACT } from '../thirdweb/thirdwebConfig';
+import { USDT_CONTRACT, LOAN_MANAGER_CONTRACT, LIQUIDITY_POOL_CONTRACT } from '../thirdweb/thirdwebConfig';
 import { LoanManagerABI } from '../contracts/interfaces/LoanManager';
 
 interface BorrowFormProps {
@@ -53,16 +53,33 @@ export function BorrowForm({ collateralId, maxLoanAmount, onBorrow, isLoading }:
         }
 
         try {
+            // Check if loan exists first
+            console.log("Checking existing loan for collateral:", collateralId);
+
+            try {
+                const loan = await loanManager.call(
+                    "loans",
+                    [collateralId]
+                );
+
+                console.log("Existing loan data:", loan);
+
+                // Check loan status
+                if (loan && loan.isActive) {
+                    setError("A loan already exists for this collateral");
+                    return;
+                }
+            } catch (error) {
+                console.log("Error checking loan status:", error);
+            }
+
             const amount = ethers.utils.parseEther(maxLoanAmount);
-            console.log("Initiating borrow with:", {
+            console.log("Parameters validated, proceeding with borrow:", {
                 collateralId,
                 maxLoanAmount,
                 parsedAmount: amount.toString(),
-                userAddress: address
-            });
-
-            console.log("Loan Manager Contract:", {
-                address: await loanManager.getAddress()
+                userAddress: address,
+                loanManagerAddress: await loanManager.getAddress()
             });
 
             const tx = await loanManager.call(
@@ -73,12 +90,22 @@ export function BorrowForm({ collateralId, maxLoanAmount, onBorrow, isLoading }:
                 ]
             );
 
-            console.log("Borrow transaction:", tx);
+            console.log("Borrow transaction initiated:", tx);
             await onBorrow(collateralId, maxLoanAmount);
         } catch (error: any) {
-            console.error("Borrow failed:", error);
-            // if(error.message.includes)
-            setError(error.message || "Failed to borrow");
+            console.error("Borrow failed with error:", {
+                message: error.message,
+                error
+            });
+
+            // Add specific error handling
+            if (error.message.includes("Loan already exists")) {
+                setError("This NFT already has an active loan. Please repay the existing loan first.");
+            } else if (error.message.includes("execution reverted")) {
+                setError("Transaction failed - please check your collateral and loan amount");
+            } else {
+                setError(error.message || "Failed to borrow");
+            }
         }
     };
 
@@ -96,6 +123,32 @@ export function BorrowForm({ collateralId, maxLoanAmount, onBorrow, isLoading }:
         };
         verifyContract();
     }, [loanManager]);
+
+    // Add a useEffect to check loan status when collateralId changes
+    useEffect(() => {
+        const checkLoanStatus = async () => {
+            if (!loanManager || !collateralId) return;
+
+            try {
+                const loan = await loanManager.call(
+                    "loans",
+                    [collateralId]
+                );
+
+                console.log("Current loan status for collateral", collateralId, ":", loan);
+
+                if (loan && loan.isActive) {
+                    setError("This NFT already has an active loan");
+                } else {
+                    setError("");
+                }
+            } catch (error) {
+                console.error("Error checking loan status:", error);
+            }
+        };
+
+        checkLoanStatus();
+    }, [loanManager, collateralId]);
 
     return (
         <div>
