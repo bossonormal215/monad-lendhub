@@ -2,8 +2,8 @@ const { ethers } = require('hardhat');
 const axios = require('axios');
 // const { DmonNFT } = require('../../typechain-types');
 
-// const DEPLOYED_CONTRACT_ADDRESS = '0xFd6E4CF0FC697236b359ac67701B8D1dFe82D301'; // monad devnet
-const DEPLOYED_CONTRACT_ADDRESS = '0x6c5006D7aC2e255f60C154DFEE9150BCE94C4C38'; // monad devnet with pyth
+const DEPLOYED_CONTRACT_ADDRESS = '0xFd6E4CF0FC697236b359ac67701B8D1dFe82D301'; // monad devnet
+// const DEPLOYED_CONTRACT_ADDRESS = '0x6c5006D7aC2e255f60C154DFEE9150BCE94C4C38'; // monad devnet with pyth
 
 async function getContract() {
   // No type annotations in JavaScript

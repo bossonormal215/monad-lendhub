@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+/*
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -61,5 +61,83 @@ contract USDTLiquidityPool is Ownable {
 
     function getUserPoints(address user) external view returns (uint256) {
         return deposits[user].points;
+    }
+}
+*/
+////////////////////////////////////////////////
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract USDTLiquidityPool is Ownable {
+    IERC20 public usdt;
+
+    mapping(address => uint256) public deposits;
+    uint256 public totalDeposits;
+
+    event LiquidityAdded(address indexed provider, uint256 amount);
+    event LiquidityRemoved(address indexed provider, uint256 amount);
+    event USDTBorrowed(address indexed borrower, uint256 amount);
+    event USDTRepaid(address indexed borrower, uint256 amount);
+
+    constructor(address _usdt) {
+        usdt = IERC20(_usdt);
+    }
+
+    function addLiquidity(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        require(
+            usdt.transferFrom(msg.sender, address(this), amount),
+            "USDT transfer failed"
+        );
+
+        deposits[msg.sender] += amount;
+        totalDeposits += amount;
+
+        emit LiquidityAdded(msg.sender, amount);
+    }
+
+    function removeLiquidity(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        require(deposits[msg.sender] >= amount, "Insufficient balance");
+        require(
+            totalDeposits - amount >= getTotalBorrowed(),
+            "Insufficient liquidity"
+        );
+
+        deposits[msg.sender] -= amount;
+        totalDeposits -= amount;
+
+        require(usdt.transfer(msg.sender, amount), "USDT transfer failed");
+
+        emit LiquidityRemoved(msg.sender, amount);
+    }
+
+    function borrowUSDT(address borrower, uint256 amount) external {
+        // Only LoanManager can call this
+        require(msg.sender == owner(), "Unauthorized");
+        require(amount <= getAvailableLiquidity(), "Insufficient liquidity");
+
+        require(usdt.transfer(borrower, amount), "USDT transfer failed");
+
+        emit USDTBorrowed(borrower, amount);
+    }
+
+    function getTotalLiquidity() external view returns (uint256) {
+        return totalDeposits;
+    }
+
+    function getAvailableLiquidity() public view returns (uint256) {
+        return usdt.balanceOf(address(this));
+    }
+
+    function getTotalBorrowed() public view returns (uint256) {
+        return totalDeposits - getAvailableLiquidity();
+    }
+
+    function getUserDeposit(address user) external view returns (uint256) {
+        return deposits[user];
     }
 }

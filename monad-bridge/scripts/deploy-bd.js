@@ -36,57 +36,191 @@ main()
   });
 */
 
-
 ////////////////////////////////////////////
-  const { ethers } = require("hardhat");
+/*
+const { ethers } = require('hardhat');
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with:", deployer.address);
+  console.log('Deploying contracts with:', deployer.address);
 
   // Deploy Mock USDT
-  const MockUSDT = await ethers.getContractFactory("MockUSDT");
+  const MockUSDT = await ethers.getContractFactory('MockUSDT');
   const usdt = await MockUSDT.deploy();
   // await usdt.deployed();
   await usdt.waitForDeployment();
   const UsdtAddress = await usdt.getAddress();
-  console.log("USDT deployed to:", UsdtAddress);
+  console.log('USDT deployed to:', UsdtAddress);
 
   // Deploy USDT Liquidity Pool
-  const USDTLiquidityPool = await ethers.getContractFactory("USDTLiquidityPool");
+  const USDTLiquidityPool = await ethers.getContractFactory(
+    'USDTLiquidityPool'
+  );
   console.log(`Deploying USDTLiquidityPool contract!!!!!!!!!!!`);
   const liquidityPool = await USDTLiquidityPool.deploy(UsdtAddress);
   // await liquidityPool.deployed();
   await liquidityPool.waitForDeployment();
   const liquidityPoolAddress = await liquidityPool.getAddress();
-  console.log("USDT Liquidity Pool deployed to:", liquidityPoolAddress);
+  console.log('USDT Liquidity Pool deployed to:', liquidityPoolAddress);
 
   // Deploy NFT Vault
-  const NFTCollateralVault = await ethers.getContractFactory("NFTCollateralVault");
+  const NFTCollateralVault = await ethers.getContractFactory(
+    'NFTCollateralVault'
+  );
   console.log(`Deploying NFTCollateralVault contract!!!!!!!!!!!`);
   const vault = await NFTCollateralVault.deploy();
   // await vault.deployed();
   await vault.waitForDeployment();
   const vaultAddress = await vault.getAddress();
-  console.log("NFT Vault deployed to:", vaultAddress);
+  console.log('NFT Vault deployed to:', vaultAddress);
 
   // Deploy Loan Manager
-  const LoanManager = await ethers.getContractFactory("LoanManager");
+  const LoanManager = await ethers.getContractFactory('LoanManager');
   console.log(`Deploying LoanManager contract!!!!!!!!!!!`);
-  const loanManager = await LoanManager.deploy(UsdtAddress, vaultAddress, liquidityPoolAddress);
-  // await loanManager.deployed();
+  const loanManager = await LoanManager.deploy(
+    UsdtAddress,
+    vaultAddress,
+    liquidityPoolAddress
+  );
+  
   await loanManager.waitForDeployment();
   const loanManagerAddress = await loanManager.getAddress();
-  console.log("LoanManager deployed to:", loanManagerAddress);
+  console.log('LoanManager deployed to:', loanManagerAddress);
 
   // Deploy Liquidation Manager
-  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const LiquidationManager = await ethers.getContractFactory(
+    'LiquidationManager'
+  );
   console.log(`Deploying LiquidationManager contract!!!!!!!!!!!`);
-  const liquidationManager = await LiquidationManager.deploy(UsdtAddress, vaultAddress, liquidityPoolAddress);
+  const liquidationManager = await LiquidationManager.deploy(
+    UsdtAddress,
+    vaultAddress,
+    liquidityPoolAddress
+  );
   // await liquidationManager.deployed();
   await liquidationManager.waitForDeployment();
   const liquidationManagerAddress = await liquidationManager.getAddress();
-  console.log("LiquidationManager deployed to:", liquidationManagerAddress);
+  console.log('LiquidationManager deployed to:', liquidationManagerAddress);
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+*/
+
+////////////////////////////////////////////
+const { ethers } = require('hardhat');
+
+async function main() {
+  const [deployer] = await ethers.getSigners();
+  console.log('Deploying contracts with:', deployer.address);
+
+  // Deploy Mock USDT
+  const MockUSDT = await ethers.getContractFactory('MockUSDT');
+  const usdt = await MockUSDT.deploy();
+  await usdt.waitForDeployment();
+  const UsdtAddress = await usdt.getAddress();
+  console.log('USDT deployed to:', UsdtAddress);
+
+  // Deploy USDT Liquidity Pool
+  const USDTLiquidityPool = await ethers.getContractFactory(
+    'USDTLiquidityPool'
+  );
+  console.log(`Deploying USDTLiquidityPool contract...`);
+  const liquidityPool = await USDTLiquidityPool.deploy(UsdtAddress);
+  await liquidityPool.waitForDeployment();
+  const liquidityPoolAddress = await liquidityPool.getAddress();
+  console.log('USDT Liquidity Pool deployed to:', liquidityPoolAddress);
+
+  // Deploy NFT Vault
+  const NFTCollateralVault = await ethers.getContractFactory(
+    'NFTCollateralVault'
+  );
+  console.log(`Deploying NFTCollateralVault contract...`);
+  const vault = await NFTCollateralVault.deploy();
+  await vault.waitForDeployment();
+  const vaultAddress = await vault.getAddress();
+  console.log('NFT Vault deployed to:', vaultAddress);
+
+  // Deploy Loan Manager
+  const LoanManager = await ethers.getContractFactory('LoanManager');
+  console.log(`Deploying LoanManager contract...`);
+  const loanManager = await LoanManager.deploy(
+    UsdtAddress,
+    vaultAddress,
+    liquidityPoolAddress
+  );
+  await loanManager.waitForDeployment();
+  const loanManagerAddress = await loanManager.getAddress();
+  console.log('LoanManager deployed to:', loanManagerAddress);
+
+  // Deploy Liquidation Manager
+  const LiquidationManager = await ethers.getContractFactory(
+    'LiquidationManager'
+  );
+  console.log(`Deploying LiquidationManager contract...`);
+  const liquidationManager = await LiquidationManager.deploy(
+    vaultAddress,
+    loanManagerAddress,
+    liquidityPoolAddress
+  );
+  await liquidationManager.waitForDeployment();
+  const liquidationManagerAddress = await liquidationManager.getAddress();
+  console.log('LiquidationManager deployed to:', liquidationManagerAddress);
+
+  // Set up permissions and connections
+  console.log('Setting up contract permissions...');
+
+  // 1. Transfer ownership of LiquidityPool to LoanManager
+  const transferLiquidityPoolTx = await liquidityPool.transferOwnership(
+    loanManagerAddress
+  );
+  await transferLiquidityPoolTx.wait();
+  console.log('LiquidityPool ownership transferred to LoanManager');
+
+  // 2. Whitelist DMONNFT contract in NFT Vault (replace with your NFT contract address)
+  const DMONNFT_ADDRESS = '0xFd6E4CF0FC697236b359ac67701B8D1dFe82D301';
+  const whitelistNFTTx = await vault.whitelistNFT(DMONNFT_ADDRESS);
+  await whitelistNFTTx.wait();
+  console.log('DMONNFT whitelisted in NFT Vault');
+
+  // 3. Set up mock USDT for testing
+  const mintAmount = ethers.parseUnits('1000000', 18); // 1 million USDT
+  const mintTx = await usdt.mint(deployer.address, mintAmount);
+  await mintTx.wait();
+  console.log('Minted test USDT to deployer');
+
+  // Log all deployed addresses for frontend configuration
+  console.log('\nDeployed Contract Addresses:');
+  console.log('--------------------');
+  console.log('USDT:', UsdtAddress);
+  console.log('LiquidityPool:', liquidityPoolAddress);
+  console.log('NFTVault:', vaultAddress);
+  console.log('LoanManager:', loanManagerAddress);
+  console.log('LiquidationManager:', liquidationManagerAddress);
+
+  // Verify contract addresses are correctly set
+  console.log('\nVerifying contract connections...');
+
+  const loanManagerUSDT = await loanManager.usdt();
+  const loanManagerVault = await loanManager.nftVault();
+  const loanManagerPool = await loanManager.liquidityPool();
+
+  console.log(
+    'LoanManager USDT address matches:',
+    loanManagerUSDT === UsdtAddress
+  );
+  console.log(
+    'LoanManager NFTVault address matches:',
+    loanManagerVault === vaultAddress
+  );
+  console.log(
+    'LoanManager LiquidityPool address matches:',
+    loanManagerPool === liquidityPoolAddress
+  );
 }
 
 main()

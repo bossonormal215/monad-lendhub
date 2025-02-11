@@ -41,7 +41,7 @@ async function main(hre) {
 
     console.log('Mint Price in ETH:', mintPriceInEth.toFixed(8)); // Display to 8 decimals
 
-    const quantity = 1; // Number of NFTs to mint
+    const quantity = 4; // Number of NFTs to mint
     const totalPriceInEth = mintPriceInEth * quantity;
 
     console.log(
