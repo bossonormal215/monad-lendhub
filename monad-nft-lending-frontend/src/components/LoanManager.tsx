@@ -1,15 +1,36 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useContract, useAddress } from '@thirdweb-dev/react';
-// import { ethers } from 'ethers';
-import { LOAN_MANAGER_CONTRACT, NFT_VAULT_CONTRACT } from '../thirdweb/thirdwebConfig';
+import { ethers } from 'ethers';
+import { LOAN_MANAGER_CONTRACT, NFT_VAULT_CONTRACT, USDT_CONTRACT, LIQUIDATION_MANAGER_CONTRACT } from '../thirdweb/thirdwebConfig';
 import { LoanManagerABI } from '@/contracts/interfaces/LoanManager';
 import { NFTCollateralVaultABI } from '@/contracts/interfaces/NFTCollateralVault';
+import { LiquidationManagerABI } from '@/contracts/interfaces/LiquidationManager';
+import { MockUsdtABI } from '@/contracts/interfaces/mocUsdt';
 
 interface LoanManagerProps {
     collateralId: number | null;
     maxLoanAmount?: string;
     onNFTWithdrawn?: (collateralId: number) => Promise<void>;
 }
+
+// Add a utility function for formatting large numbers
+const formatBigNumber = (value: any, decimals = 18) => {
+    try {
+        return ethers.utils.formatUnits(value, decimals);
+    } catch (error) {
+        console.error("Error formatting BigNumber:", error);
+        return "0";
+    }
+};
+
+const parseBigNumber = (value: string, decimals = 18) => {
+    try {
+        return ethers.utils.parseUnits(value, decimals);
+    } catch (error) {
+        console.error("Error parsing BigNumber:", error);
+        return ethers.BigNumber.from(0);
+    }
+};
 
 export function LoanManager({
     collateralId,
@@ -21,6 +42,8 @@ export function LoanManager({
     const [status, setStatus] = useState<string>('');
     const [activeLoan, setActiveLoan] = useState<any>(null);
     const address = useAddress();
+
+    // Move all contract initializations to component level
     const { contract: loanManager } = useContract(
         LOAN_MANAGER_CONTRACT,
         LoanManagerABI.abi
@@ -29,43 +52,77 @@ export function LoanManager({
         NFT_VAULT_CONTRACT,
         NFTCollateralVaultABI.abi
     );
+    const { contract: liquidationManager } = useContract(
+        LIQUIDATION_MANAGER_CONTRACT,
+        LiquidationManagerABI.abi
+    );
+    const { contract: usdt } = useContract(
+        USDT_CONTRACT,
+        MockUsdtABI.abi
+    );
 
     const fetchLoanDetails = useCallback(async () => {
         if (!loanManager || !collateralId || !address) return;
 
         try {
-            // console.log('Loan Manager contract: ', loanManager);
             console.log("Fetching loan details for collateral:", collateralId);
 
-            // Get user's loans using the correct function
-            const userLoansData = await loanManager.call(
-                "getUserLoans",
-                [address]
+            // Get loan details
+            const loan = await loanManager.call(
+                "loans",
+                [collateralId]
             );
 
-            console.log("User loans data:", userLoansData);
+            console.log("Raw loan details:", loan);
 
-            if (userLoansData) {
-                const [collateralIds, amounts, timestamps, activeStates, interestAmounts] = userLoansData;
+            // Check loan structure and active status
+            if (loan && typeof loan === 'object') {
+                // Log full loan structure for debugging
+                console.log("Loan structure:", {
+                    collateralId: loan.collateralId?.toString(),
+                    amount: loan.amount?.toString(),
+                    timestamp: loan.timestamp?.toString(),
+                    isActive: loan.isActive,
+                    interestRate: loan.interestRate?.toString(),
+                    duration: loan.duration?.toString()
+                });
 
-                // Find the loan for this collateral
-                const index = collateralIds.findIndex((id: any) =>
-                    Number(id) === collateralId
-                );
+                // Check if loan is actually active
+                const hasActiveLoan = loan.isActive === true && loan.amount && !loan.amount.isZero();
 
-                if (index !== -1 && activeStates[index]) {
+                if (hasActiveLoan) {
+                    console.log("Active loan found:", {
+                        amount: loan.amount.toString(),
+                        interest: loan.interest?.toString(),
+                        isActive: loan.isActive
+                    });
+
                     setActiveLoan({
-                        amount: amounts[index],
-                        timestamp: timestamps[index],
-                        interest: interestAmounts[index]
+                        amount: loan.amount,
+                        startTime: loan.timestamp || 0,
+                        duration: loan.duration || 0,
+                        interest: loan.interest || 0,
+                        isActive: true,
+                        totalRepayment: loan.amount.add(loan.interest || 0)
                     });
                 } else {
+                    console.log("No active loan - NFT is available for borrowing");
                     setActiveLoan(null);
                 }
+            } else {
+                console.log("Invalid loan data");
+                setActiveLoan(null);
             }
+
+            setError('');
         } catch (error: any) {
-            console.error("Error fetching loan details:", error);
+            console.error("Error fetching loan details:", {
+                error,
+                message: error.message,
+                collateralId
+            });
             setError("Failed to fetch loan details");
+            setActiveLoan(null);
         }
     }, [loanManager, collateralId, address]);
 
@@ -73,43 +130,189 @@ export function LoanManager({
         fetchLoanDetails();
     }, [fetchLoanDetails]);
 
+    // Add debug logging when component mounts
+    useEffect(() => {
+        console.log("LoanManager mounted with:", {
+            hasLoanManager: !!loanManager,
+            collateralId,
+            address,
+            activeLoan
+        });
+    }, []);
+
+    // Add debug logging for contract calls
+    useEffect(() => {
+        const verifyContracts = async () => {
+            if (loanManager) {
+                try {
+                    const address = await loanManager.getAddress();
+                    console.log("LoanManager contract verified at:", address);
+                } catch (error) {
+                    console.error("LoanManager contract verification failed:", error);
+                }
+            }
+        };
+        verifyContracts();
+    }, [loanManager]);
+
     const handleRepay = async () => {
-        if (!loanManager || !collateralId || !activeLoan) return;
+        if (!loanManager || !collateralId || !activeLoan || !usdt) return;
 
         setIsLoading(true);
         setError('');
+        setStatus('Processing repayment...');
 
         try {
+            const repaymentAmount = activeLoan.totalRepayment;
+            console.log("Repayment details:", {
+                loanAmount: formatBigNumber(activeLoan.amount),
+                interest: formatBigNumber(activeLoan.interest),
+                totalRepayment: formatBigNumber(repaymentAmount),
+                rawRepaymentAmount: repaymentAmount.toString()
+            });
+
+            // Check USDT balance
+            const balance = await usdt.call(
+                "balanceOf",
+                [address]
+            );
+            console.log("USDT Balance:", {
+                formatted: formatBigNumber(balance),
+                raw: balance.toString()
+            });
+
+            if (balance.lt(repaymentAmount)) {
+                setError(`Insufficient USDT balance. Need ${formatBigNumber(repaymentAmount)} USDT, have ${formatBigNumber(balance)} USDT`);
+                return;
+            }
+
+            // First check current allowance
+            const currentAllowance = await usdt.call(
+                "allowance",
+                [address, LOAN_MANAGER_CONTRACT]
+            );
+            console.log("Current allowance:", {
+                formatted: formatBigNumber(currentAllowance),
+                raw: currentAllowance.toString()
+            });
+
+            // If current allowance is less than repayment amount, approve
+            if (currentAllowance.lt(repaymentAmount)) {
+                setStatus('Approving USDT...');
+
+                try {
+                    // First approve 0
+                   /* const resetApproveTx = */await usdt.call(
+                        "approve",
+                        [LOAN_MANAGER_CONTRACT, ethers.constants.Zero]
+                    );
+                    // await resetApproveTx.wait();
+                    console.log("Reset approval completed");
+
+                    // Then approve max uint256 to prevent future approvals
+                    const maxUint256 = ethers.constants.MaxUint256;
+                    /*const approveTx =*/ await usdt.call(
+                        "approve",
+                        [LOAN_MANAGER_CONTRACT, maxUint256]
+                    );
+                    // await approveTx.wait();
+                    console.log("Max approval completed");
+                } catch (approvalError) {
+                    console.error("Approval failed:", approvalError);
+                    setError("Failed to approve USDT. Please try again.");
+                    return;
+                }
+            }
+
+            // Verify allowance after approval
+            const newAllowance = await usdt.call(
+                "allowance",
+                [address, LOAN_MANAGER_CONTRACT]
+            );
+            console.log("New allowance:", {
+                formatted: formatBigNumber(newAllowance),
+                raw: newAllowance.toString()
+            });
+
+            if (newAllowance.lt(repaymentAmount)) {
+                setError("USDT approval failed. Please try again.");
+                return;
+            }
+
+            // Proceed with repayment
+            setStatus('Repaying loan...');
             const tx = await loanManager.call(
-                "repayLoan",  // Changed to repayLoan as per contract
+                "repayLoan",
                 [collateralId]
             );
-            console.log("Repay transaction:", tx);
+            // await tx.wait(); // Wait for transaction confirmation
+            console.log("Repay transaction completed:", tx);
+
+            setStatus("Loan successfully repaid! 🎉");
             await fetchLoanDetails();
         } catch (error: any) {
             console.error("Repay failed:", error);
-            setError(error.message || "Failed to repay loan");
+            if (error.message.includes("insufficient allowance")) {
+                setError("USDT approval needed. Please try again.");
+            } else {
+                setError(error.message || "Failed to repay loan");
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleLiquidate = async () => {
-        if (!loanManager || !collateralId || !activeLoan) return;
+        if (!loanManager || !collateralId || !activeLoan || !liquidationManager) return;
 
         setIsLoading(true);
         setError('');
+        setStatus('Processing liquidation...');
 
         try {
-            const tx = await loanManager.call(
+            // Check if loan is eligible for liquidation
+            const loanDetails = await liquidationManager.call(
+                "loans",
+                [collateralId]
+            );
+            console.log("Can liquidate:", loanDetails);
+
+            if (!loanDetails || !loanDetails.isActive) {
+                setError("This loan is not eligible for liquidation yet");
+                return;
+            }
+
+            // Check if caller has permission to liquidate
+            const hasPermission = await liquidationManager.call(
+                "hasLiquidationPermission",
+                [address, collateralId]
+            );
+            console.log("Has liquidation permission:", hasPermission);
+
+            if (!hasPermission) {
+                setError("You don't have permission to liquidate this loan");
+                return;
+            }
+
+            // Attempt liquidation
+            setStatus('Initiating liquidation...');
+            const tx = await liquidationManager.call(
                 "liquidate",
                 [collateralId]
             );
             console.log("Liquidate transaction:", tx);
+
+            setStatus("Collateral successfully liquidated! 🎉");
             await fetchLoanDetails();
         } catch (error: any) {
             console.error("Liquidation failed:", error);
-            setError(error.message || "Failed to liquidate");
+            if (error.message.includes("not eligible")) {
+                setError("Loan is not eligible for liquidation");
+            } else if (error.message.includes("no permission")) {
+                setError("You don't have permission to liquidate this loan");
+            } else {
+                setError(error.message || "Failed to liquidate");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -158,41 +361,55 @@ export function LoanManager({
 
     return (
         <div className="space-y-4">
-            <div className="flex gap-4">
-                <button
-                    onClick={handleRepay}
-                    disabled={isLoading || !collateralId || !activeLoan}
-                    className={`flex-1 py-3 px-6 rounded-lg text-lg font-medium ${isLoading || !collateralId || !activeLoan
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-yellow-500 hover:bg-yellow-600'
-                        } text-white transition-colors`}
-                >
-                    Repay Loan
-                </button>
+            {!activeLoan ? (
+                // Show borrow option when no active loan
+                <div className="text-center text-gray-400">
+                    <p>NFT deposited as collateral</p>
+                    <p>You can borrow up to {maxLoanAmount} USDT</p>
+                    <button
+                        onClick={handleWithdrawNFT}
+                        disabled={isLoading}
+                        className={`w-full mt-4 py-3 px-6 rounded-lg text-lg font-medium ${isLoading
+                            ? 'bg-gray-600 cursor-not-allowed'
+                            : 'bg-red-500 hover:bg-red-600'
+                            } text-white transition-colors`}
+                    >
+                        Withdraw NFT
+                    </button>
+                </div>
+            ) : (
+                // Show loan management options when loan is active
+                <div className="space-y-4">
+                    <div className="text-sm text-gray-400 mb-2">
+                        <p>Loan Amount: {formatBigNumber(activeLoan.amount)} USDT</p>
+                        <p>Interest: {formatBigNumber(activeLoan.interest)} USDT</p>
+                        <p>Total to Repay: {formatBigNumber(activeLoan.totalRepayment)} USDT</p>
+                    </div>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={handleRepay}
+                            disabled={isLoading}
+                            className={`flex-1 py-3 px-6 rounded-lg text-lg font-medium ${isLoading
+                                ? 'bg-gray-600 cursor-not-allowed'
+                                : 'bg-yellow-500 hover:bg-yellow-600'
+                                } text-white transition-colors`}
+                        >
+                            {isLoading ? 'Processing...' : 'Repay Loan'}
+                        </button>
 
-                <button
-                    onClick={handleLiquidate}
-                    disabled={isLoading || !collateralId || !activeLoan}
-                    className={`flex-1 py-3 px-6 rounded-lg text-lg font-medium ${isLoading || !collateralId || !activeLoan
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-red-500 hover:bg-red-600'
-                        } text-white transition-colors`}
-                >
-                    Liquidate Collateral
-                </button>
-            </div>
-
-            {/* Add Withdraw NFT button */}
-            <button
-                onClick={handleWithdrawNFT}
-                disabled={isLoading || !collateralId || activeLoan}
-                className={`w-full py-3 px-6 rounded-lg text-lg font-medium ${isLoading || !collateralId || activeLoan
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-red-500 hover:bg-red-600'
-                    } text-white transition-colors`}
-            >
-                Withdraw NFT
-            </button>
+                        <button
+                            onClick={handleLiquidate}
+                            disabled={isLoading}
+                            className={`flex-1 py-3 px-6 rounded-lg text-lg font-medium ${isLoading
+                                ? 'bg-gray-600 cursor-not-allowed'
+                                : 'bg-red-500 hover:bg-red-600'
+                                } text-white transition-colors`}
+                        >
+                            Liquidate
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {error && (
                 <p className="mt-2 text-sm text-red-500">{error}</p>
