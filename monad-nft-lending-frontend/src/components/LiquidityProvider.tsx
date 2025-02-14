@@ -80,8 +80,15 @@ export function LiquidityProvider() {
             setStatus('Successfully minted USDT! 🎉');
             await fetchUSDTBalance();
         } catch (error: any) {
-            console.error('Error:', error);
-            setError(error.message || 'Failed to mint USDT');
+            if (error.message.includes){
+                console.log('USDT MINTING Error: ', error.message)
+            }
+            if (error.message.includes('owner')) {
+                setError('Only Owner Is Allowed To Mint USDT !! ');
+            }
+            if ( error.message.includes('data')) {
+                setError('Missing revert Data, You Are Not Allowed To Mint!!');
+            }
         } finally {
             setIsLoading(false);
         }

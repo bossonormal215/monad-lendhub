@@ -58,17 +58,15 @@ function App() {
         rainbowWallet()
       ]}
     >
+      
       <Main />
-      <MintDMONPage />
+      
 
     </ThirdwebProvider>
 
 
   );
 }
-
-
-
 
 function MintDMONPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -515,6 +513,7 @@ function Main() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-6">
       <h1 className="text-3xl font-bold mb-6">Monad NFT Lending</h1>
       <ConnectWallet modalTitle="Connect Your Wallet" modalSize="wide" />
+      <MintDMONPage />
 
       {address && (
         <div className="w-full max-w-4xl space-y-6">
