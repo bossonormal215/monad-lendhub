@@ -353,7 +353,13 @@ export function LoanManager({
             }
         } catch (error: any) {
             console.error("Withdraw NFT failed:", error);
+            if (error.message.includes('Collateral inactive')){
+                setError(' Collateral inactive: You Have Already Withdrawn The Selected NFT');
+            }
+            // else if (error.message.includes){}
+            else{
             setError(error.message || "Failed to withdraw NFT");
+            }
         } finally {
             setIsLoading(false);
         }

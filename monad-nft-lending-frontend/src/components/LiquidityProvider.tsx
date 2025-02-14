@@ -3,6 +3,23 @@ import { ethers } from 'ethers';
 import { useContract, useAddress } from '@thirdweb-dev/react';
 import { USDT_CONTRACT, LIQUIDITY_POOL_CONTRACT } from '../thirdweb/thirdwebConfig';
 
+// Add this utility function at the top
+const formatUSDT = (value: string | number): string => {
+    try {
+        // If value is in wei, convert to ether first
+        const etherValue = typeof value === 'string' && value.includes('e')
+            ? ethers.utils.formatEther(value)
+            : value.toString();
+
+        // Round to 2 decimal places
+        const rounded = Number(etherValue).toFixed(2);
+        return `${rounded} USDT`;
+    } catch (error) {
+        console.error("Error formatting USDT:", error);
+        return "0.00 USDT";
+    }
+};
+
 export function LiquidityProvider() {
     const [amount, setAmount] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
@@ -80,13 +97,13 @@ export function LiquidityProvider() {
             setStatus('Successfully minted USDT! 🎉');
             await fetchUSDTBalance();
         } catch (error: any) {
-            if (error.message.includes){
+            if (error.message.includes) {
                 console.log('USDT MINTING Error: ', error.message)
             }
             if (error.message.includes('owner')) {
                 setError('Only Owner Is Allowed To Mint USDT !! ');
             }
-            if ( error.message.includes('data')) {
+            if (error.message.includes('data')) {
                 setError('Missing revert Data, You Are Not Allowed To Mint!!');
             }
         } finally {
@@ -187,11 +204,15 @@ export function LiquidityProvider() {
                 <div className="flex justify-between items-center">
                     <div>
                         <p className="text-sm text-gray-400">Your USDT Balance</p>
-                        <p className="text-lg font-semibold text-green-400">{usdtBalance} USDT</p>
+                        <p className="text-lg font-semibold text-green-400">
+                            {formatUSDT(usdtBalance)}
+                        </p>
                     </div>
                     <div className="text-right">
                         <p className="text-sm text-gray-400">Total Pool Liquidity</p>
-                        <p className="text-lg font-semibold text-blue-400">{poolBalance} USDT</p>
+                        <p className="text-lg font-semibold text-blue-400">
+                            {formatUSDT(poolBalance)}
+                        </p>
                     </div>
                 </div>
             </div>

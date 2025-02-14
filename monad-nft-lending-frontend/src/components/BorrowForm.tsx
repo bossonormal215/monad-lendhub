@@ -26,6 +26,18 @@ export function BorrowForm({ collateralId, maxLoanAmount, onBorrow, isLoading }:
         setStatus('');
     }, [collateralId]);
 
+    // Clear messages after timeout
+    useEffect(() => {
+        if (error || status) {
+            const timer = setTimeout(() => {
+                setError('');
+                setStatus('');
+            }, 5000); // 20 seconds
+
+            return () => clearTimeout(timer);
+        }
+    }, [error, status]);
+
     const validateAmount = (value: string): boolean => {
         if (!value || isNaN(Number(value))) {
             setError('Please enter a valid amount');
@@ -107,8 +119,13 @@ export function BorrowForm({ collateralId, maxLoanAmount, onBorrow, isLoading }:
                 setError("This NFT already has an active loan");
             } else if (error.message.includes("insufficient liquidity")) {
                 setError("Insufficient liquidity in the pool");
-            } else {
-                setError(error.message || "Failed to borrow");
+            }
+            else if (error.message.includes('Collateral not active')) {
+                setError('Selected Collateral Is Not Active')
+            }
+            else {
+                // setError(error.message || "Failed to borrow");
+                console.log(error.message || "Failed to borrow");
             }
             setStatus(''); // Clear status on error
         } finally {

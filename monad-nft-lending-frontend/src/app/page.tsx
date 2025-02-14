@@ -58,9 +58,9 @@ function App() {
         rainbowWallet()
       ]}
     >
-      
+
       <Main />
-      
+
 
     </ThirdwebProvider>
 
@@ -401,9 +401,20 @@ function Main() {
         // Refresh user's collaterals after successful deposit
         await fetchUserCollaterals();
       } catch (depositError: any) {
-        console.error("Deposit failed:", depositError);
-        setStatus(`Deposit failed: ${depositError.message || "Unknown error"}`);
-        throw depositError;
+        if (depositError.message.includes(' invalid token ID')) {
+          console.log("Depsoit error( invalid token ID) :", depositError);
+          setStatus('Invalid TokenID Entered')
+        }
+        else if (depositError.message.includes('transfer from incorrect owner')) {
+          console.log('Deposit Error( transfer from incorrect owner): ', depositError.message)
+          setStatus('You Are Not The Owner of the tokenId')
+        }
+        else {
+          console.error("Deposit failed:", depositError.message);
+          // setStatus(`Deposit failed: ${depositError.message || "Unknown error"}`);
+          setStatus('Deposit Failed')
+          // throw depositError;
+        }
       }
 
     } catch (error: any) {
@@ -509,118 +520,156 @@ function Main() {
     setMaxLoanAmount('0');
   };
 
+  // Add auto-dismiss effect
+  useEffect(() => {
+    if (status) {
+      const timer = setTimeout(() => {
+        setStatus('');
+      }, 5000); // 20 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-6">
-      <h1 className="text-3xl font-bold mb-6">Monad NFT Lending</h1>
-      <ConnectWallet modalTitle="Connect Your Wallet" modalSize="wide" />
-      <MintDMONPage />
-
-      {address && (
-        <div className="w-full max-w-4xl space-y-6">
-          {/* Debug Info */}
-          <div className="p-4 bg-gray-800 rounded-lg mt-4">
-            <h3 className="text-lg font-medium mb-3">Debug Info</h3>
-            <div className="space-y-2 text-sm">
-              <p>Connected Address: {address || 'Not connected'}</p>
-              <p>Selected Collateral ID: {selectedCollateralId || 'None'}</p>
-              <p>Max Loan Amount: {maxLoanAmount || '0'} USDT</p>
-              <p>User Collaterals: {userCollaterals.length}</p>
-              <p>Contracts Loaded: {
-                `NFTVault: ${!!nftVault}, ` +
-                `LoanManager: ${!!loanManager}, ` +
-                `LiquidationManager: ${!!liquidationManager}`
-              }</p>
-            </div>
-          </div>
-
-          {/* Debug Controls */}
-          <div className="p-4 bg-gray-800 rounded-lg">
-            <h3 className="text-lg font-medium mb-3">Debug Controls</h3>
-            <button
-              onClick={() => {
-                // Simulate having a collateral
-                const testCollateral = {
-                  id: 1,
-                  maxLoanAmount: ethers.utils.parseEther("1000")
-                };
-                setUserCollaterals([testCollateral]);
-                setSelectedCollateralId(testCollateral.id);
-                setMaxLoanAmount("1000");
-              }}
-              className="px-4 py-2 bg-purple-500 rounded hover:bg-purple-600"
-            >
-              Simulate Collateral
-            </button>
-          </div>
-
-          {/* Collateral Selection (if user has multiple collaterals) */}
-          {userCollaterals.length > 0 && (
-            <div className="p-4 bg-gray-800 rounded-lg">
-              <h3 className="text-lg font-medium mb-3">Your Collaterals</h3>
-              <div className="space-y-2">
-                {userCollaterals.map((collateral: any) => (
-                  <div
-                    key={collateral.id}
-                    className={`p-3 rounded-lg cursor-pointer ${selectedCollateralId === Number(collateral.id)
-                      ? 'bg-blue-600'
-                      : 'bg-gray-700 hover:bg-gray-600'
-                      }`}
-                    onClick={() => {
-                      setSelectedCollateralId(Number(collateral.id));
-                      setMaxLoanAmount(ethers.utils.formatEther(collateral.maxLoanAmount));
-                    }}
-                  >
-                    <p className="text-sm">Collateral ID: {collateral.id}</p>
-                    <p className="text-sm">Max Loan: {ethers.utils.formatEther(collateral.maxLoanAmount)} USDT</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Liquidity Management Section */}
-          <section>
-            <LiquidityProvider />
-          </section>
-
-          {/* NFT Collateral Section */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">NFT Collateral</h2>
-            <WhitelistedNFTs
-              onNFTDeposit={handleNFTDeposit}
-              isLoading={isLoading}
-            />
-          </section>
-
-          {/* Loan Operations Section */}
-          {userCollaterals.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <BorrowForm
-                    collateralId={selectedCollateralId}
-                    maxLoanAmount={maxLoanAmount}
-                    onBorrow={handleBorrow}
-                    isLoading={isLoading}
-                  />
-                </div>
-                <div className="flex-1">
-                  <LoanManager
-                    collateralId={selectedCollateralId}
-                    maxLoanAmount={maxLoanAmount}
-                    onNFTWithdrawn={handleNFTWithdrawn}
-                  />
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Status Messages */}
-          {status && (
-            <p className="mt-4 text-sm text-gray-300 text-center">{status}</p>
-          )}
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header Section */}
+      <header className="sticky top-0 z-50 bg-gray-800/80 backdrop-blur-sm p-4 border-b border-gray-700">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold">Monad NFT Lending</h1>
+          <ConnectWallet modalTitle="Connect Your Wallet" modalSize="wide" />
         </div>
-      )}
+      </header>
+
+      <main className="container mx-auto px-4 py-6 space-y-8">
+
+
+        {address && (
+          <>
+            {/* Mint Section */}
+            <section className="max-w-3xl mx-auto">
+              <MintDMONPage />
+            </section>
+            {/* Debug Sections - Collapsible on Mobile */}
+            {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <details className="bg-gray-800 rounded-lg p-4">
+                <summary className="text-lg font-medium cursor-pointer">Debug Info</summary>
+                <div className="mt-4 space-y-2 text-sm">
+                  <p>Connected Address: {address || 'Not connected'}</p>
+                  <p>Selected Collateral ID: {selectedCollateralId || 'None'}</p>
+                  <p>Max Loan Amount: {maxLoanAmount || '0'} USDT</p>
+                  <p>User Collaterals: {userCollaterals.length}</p>
+                  <p>Contracts Loaded: {
+                    `NFTVault: ${!!nftVault}, ` +
+                    `LoanManager: ${!!loanManager}, ` +
+                    `LiquidationManager: ${!!liquidationManager}`
+                  }</p>
+                </div>
+              </details>
+
+              <details className="bg-gray-800 rounded-lg p-4">
+                <summary className="text-lg font-medium cursor-pointer">Debug Controls</summary>
+                <div className="mt-4">
+                  <button
+                    onClick={() => {
+                      const testCollateral = {
+                        id: 1,
+                        maxLoanAmount: ethers.utils.parseEther("1000")
+                      };
+                      setUserCollaterals([testCollateral]);
+                      setSelectedCollateralId(testCollateral.id);
+                      setMaxLoanAmount("1000");
+                    }}
+                    className="px-4 py-2 bg-purple-500 rounded hover:bg-purple-600 w-full sm:w-auto"
+                  >
+                    Simulate Collateral
+                  </button>
+                </div>
+              </details>
+            </div> */}
+
+            {/* Collaterals Grid */}
+            {userCollaterals.length > 0 && (
+              <section className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-4">Your Collaterals</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {userCollaterals.map((collateral: any) => (
+                    <div
+                      key={collateral.id}
+                      className={`p-4 rounded-lg cursor-pointer transition-colors ${selectedCollateralId === Number(collateral.id)
+                        ? 'bg-blue-600'
+                        : 'bg-gray-700 hover:bg-gray-600'
+                        }`}
+                      onClick={() => {
+                        setSelectedCollateralId(Number(collateral.id));
+                        setMaxLoanAmount(ethers.utils.formatEther(collateral.maxLoanAmount));
+                      }}
+                    >
+                      <p>Collateral ID: {collateral.id}</p>
+                      <p>Max Loan: {ethers.utils.formatEther(collateral.maxLoanAmount)} USDT</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Main Sections */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Liquidity Section */}
+              <section className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">Liquidity Pool</h2>
+                <LiquidityProvider />
+              </section>
+
+              {/* NFT Collateral Section */}
+              <section className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">NFT Collateral</h2>
+                <WhitelistedNFTs
+                  onNFTDeposit={handleNFTDeposit}
+                  isLoading={isLoading}
+                />
+              </section>
+            </div>
+
+            {/* Loan Operations */}
+            {userCollaterals.length > 0 && (
+              <section className="bg-gray-800 rounded-lg p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Borrow</h3>
+                    <BorrowForm
+                      collateralId={selectedCollateralId}
+                      maxLoanAmount={maxLoanAmount}
+                      onBorrow={handleBorrow}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Loan Management</h3>
+                    <LoanManager
+                      collateralId={selectedCollateralId}
+                      maxLoanAmount={maxLoanAmount}
+                      onNFTWithdrawn={handleNFTWithdrawn}
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Status Messages with Animation */}
+            {status && (
+              <div
+                className="fixed bottom-4 right-4 max-w-md bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700 animate-fade-in-out"
+                style={{
+                  animation: 'fadeInOut 20s ease-in-out'
+                }}
+              >
+                <p className="text-sm">{status}</p>
+              </div>
+            )}
+          </>
+        )}
+      </main>
     </div>
   );
 }
