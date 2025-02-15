@@ -145,7 +145,12 @@ export function LiquidityProvider() {
             await fetchPoolBalance();
         } catch (error: any) {
             console.error('Error:', error);
-            setError(error.message || 'Failed to withdraw liquidity');
+            if (error.message.includes('User denied transaction signature.')){
+                setError('User denied transaction signature.')
+            } else if (error.message.includes('Insufficient liquidity')){
+                setError('Insufficient liquidity in the pool')
+            }
+            // setError(error.message || 'Failed to withdraw liquidity');
         } finally {
             setIsLoading(false);
         }
@@ -190,7 +195,10 @@ export function LiquidityProvider() {
             await fetchPoolBalance();
         } catch (error: any) {
             console.error('Error:', error);
-            setError(error.message || 'Transaction failed');
+            if (error.message.includes('user cancel')){
+                setError('User Cancelled the tx')
+            }
+            // setError(error.message || 'Transaction failed');
         } finally {
             setIsLoading(false);
         }

@@ -77,12 +77,30 @@ function MintDMONPage() {
   const [maxSupply, setMaxSupply] = useState<number>(0);
   const [totalSupply, setTotalSupply] = useState<number>(0);
   const [isPresaleActive, setIsPrivateSale] = useState<boolean>(false);
+  const [whitelistAddress, setWhitelistAddress] = useState<string>('');
+  const [isPublicSale, setIsPublicSale] = useState<boolean>(false);
+  const [adminError, setAdminError] = useState<string>('');
+  const [adminStatus, setAdminStatus] = useState<string>('');
 
   const address = useAddress();
+  const adminAddress = '0xED42844Cd35d734fec3B65dF486158C443896b41'
   const { contract: dmonContract } = useContract(
     DMON_NFT_CONTRACT.address,
     DMON_NFT_CONTRACT.abi
   );
+
+  const isAdmin = address === adminAddress;
+
+  // Add auto-dismiss effect
+  useEffect(() => {
+    if (status || error) {
+      const timer = setTimeout(() => {
+        setStatus('');
+      }, 5000); // 5 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
 
   useEffect(() => {
     const fetchContractInfo = async () => {
@@ -159,6 +177,58 @@ function MintDMONPage() {
     }
   };
 
+  // Admin Functions
+  const handleAddToWhitelist = async () => {
+    if (!dmonContract || !isAdmin) return;
+
+    setIsLoading(true);
+    setAdminError('');
+    setAdminStatus('Processing...');
+
+    try {
+      const tx = await dmonContract.call(
+        "addToWhitelist",
+        [whitelistAddress]
+      );
+      console.log("Whitelist tx:", tx);
+      setAdminStatus(`Added ${whitelistAddress} to whitelist`);
+      setWhitelistAddress(''); // Reset input
+    } catch (error: any) {
+      console.error("Whitelist error:", error);
+      setAdminError(error.message || "Failed to add to whitelist");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTogglePublicSale = async () => {
+    if (!dmonContract || !isAdmin) return;
+
+    setIsLoading(true);
+    setAdminError('');
+    setAdminStatus('Processing...');
+
+    try {
+      const tx = await dmonContract.call(
+        "togglePublicSale",
+        []
+      );
+      console.log("Toggle sale tx:", tx);
+      setIsPublicSale(!isPublicSale);
+      setAdminStatus(`${isPublicSale ? 'Disabled' : 'Enabled'} public sale`);
+    } catch (error: any) {
+      console.error("Toggle sale error:", error);
+      if (error.message.includes('user denied transaction signature')) {
+        setAdminError('User Rejected The TX');
+        setAdminStatus('User Rejected The TX');
+      }
+      // setAdminError(error.message || "Failed to toggle sale status");
+    } finally {
+      setIsLoading(false);
+      setAdminStatus('');
+    }
+  };
+
   const activeChain = {
     chainId: 20143, // Replace with actual monad devnet chain ID
     rpc: ['https://rpc-devnet.monadinfra.com/rpc/3fe540e310bbb6ef0b9f16cd23073b0a'],
@@ -175,9 +245,63 @@ function MintDMONPage() {
   };
 
   return (
-
     <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
+        {/* Admin Panel */}
+        {isAdmin && (
+          <div className="bg-gray-800 rounded-lg shadow-xl p-6 mb-8 space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-white mb-2">Admin Panel</h2>
+              <p className="text-gray-400">Manage NFT Sale</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Whitelist Management */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Add to Whitelist
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={whitelistAddress}
+                    onChange={(e) => setWhitelistAddress(e.target.value)}
+                    placeholder="Enter address"
+                    className="flex-1 px-3 py-2 bg-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-white"
+                  />
+                  <button
+                    onClick={handleAddToWhitelist}
+                    disabled={isLoading || !whitelistAddress}
+                    className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-white font-medium disabled:bg-gray-600"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Sale Toggle */}
+              <button
+                onClick={handleTogglePublicSale}
+                disabled={isLoading}
+                className={`w-full py-2 px-4 rounded-lg font-medium ${isPublicSale
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : 'bg-green-500 hover:bg-green-600'
+                  } text-white disabled:bg-gray-600`}
+              >
+                {isLoading ? 'Processing...' :
+                  isPublicSale ? 'Disable Public Sale' : 'Enable Public Sale'}
+              </button>
+
+              {adminError && (
+                <p className="text-red-500 text-sm">{adminError}</p>
+              )}
+              {adminStatus && !adminError && (
+                <p className="text-green-500 text-sm">{adminStatus}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="bg-gray-800 rounded-lg shadow-xl p-6 space-y-6">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-white mb-2">DMON NFT Mint</h1>
@@ -419,7 +543,7 @@ function Main() {
 
     } catch (error: any) {
       console.error("Error:", error);
-      setStatus(`Error: ${error.message || "Transaction failed"}`);
+      // setStatus(`Error: ${error.message || "Transaction failed"}`);
     } finally {
       setIsLoading(false);
     }
@@ -478,7 +602,7 @@ function Main() {
       setStatus("Loan successfully repaid! 🎉");
     } catch (error: any) {
       console.error("Repay failed:", error);
-      setStatus(`Repay failed: ${error.message || "Unknown error"}`);
+      // setStatus(`Repay failed: ${error.message || "Unknown error"}`);
     } finally {
       setIsLoading(false);
     }
@@ -520,16 +644,7 @@ function Main() {
     setMaxLoanAmount('0');
   };
 
-  // Add auto-dismiss effect
-  useEffect(() => {
-    if (status) {
-      const timer = setTimeout(() => {
-        setStatus('');
-      }, 5000); // 20 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
+ 
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">

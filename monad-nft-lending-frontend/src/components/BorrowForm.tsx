@@ -121,7 +121,7 @@ export function BorrowForm({ collateralId, maxLoanAmount, onBorrow, isLoading }:
                 setError("Insufficient liquidity in the pool");
             }
             else if (error.message.includes('Collateral not active')) {
-                setError('Selected Collateral Is Not Active')
+                setError('Selected Collateral Is Not Active');
             }
             else {
                 // setError(error.message || "Failed to borrow");

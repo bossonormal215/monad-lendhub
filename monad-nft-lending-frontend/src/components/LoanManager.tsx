@@ -155,6 +155,17 @@ export function LoanManager({
         verifyContracts();
     }, [loanManager]);
 
+    // Add auto-dismiss effect
+  useEffect(() => {
+    if (status || error) {
+      const timer = setTimeout(() => {
+        setStatus('');
+      }, 5000); // 5 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
     const handleRepay = async () => {
         if (!loanManager || !collateralId || !activeLoan || !usdt) return;
 
@@ -186,7 +197,7 @@ export function LoanManager({
                 return;
             }
 
-            // First check current allowance
+            // Check current allowance
             const currentAllowance = await usdt.call(
                 "allowance",
                 [address, LOAN_MANAGER_CONTRACT]
@@ -196,27 +207,29 @@ export function LoanManager({
                 raw: currentAllowance.toString()
             });
 
-            // If current allowance is less than repayment amount, approve
+            // If current allowance is less than repayment amount, approve the difference plus 1
             if (currentAllowance.lt(repaymentAmount)) {
                 setStatus('Approving USDT...');
 
                 try {
-                    // First approve 0
-                   /* const resetApproveTx = */await usdt.call(
+                    // reset approval to 0
+                    await usdt.call(
                         "approve",
                         [LOAN_MANAGER_CONTRACT, ethers.constants.Zero]
                     );
-                    // await resetApproveTx.wait();
-                    console.log("Reset approval completed");
+                    // Calculate amount to approve: (repaymentAmount - currentAllowance) + 1
+                    const amountToApprove = repaymentAmount.sub(currentAllowance).add(1);
+                    console.log("Approving additional amount:", {
+                        formatted: formatBigNumber(amountToApprove),
+                        raw: amountToApprove.toString()
+                    });
 
-                    // Then approve max uint256 to prevent future approvals
-                    const maxUint256 = ethers.constants.MaxUint256;
-                    /*const approveTx =*/ await usdt.call(
+                    // Approve exact amount needed plus 1
+                    await usdt.call(
                         "approve",
-                        [LOAN_MANAGER_CONTRACT, maxUint256]
+                        [LOAN_MANAGER_CONTRACT, amountToApprove]
                     );
-                    // await approveTx.wait();
-                    console.log("Max approval completed");
+                    console.log("Additional approval completed");
                 } catch (approvalError) {
                     console.error("Approval failed:", approvalError);
                     setError("Failed to approve USDT. Please try again.");
@@ -245,7 +258,6 @@ export function LoanManager({
                 "repayLoan",
                 [collateralId]
             );
-            // await tx.wait(); // Wait for transaction confirmation
             console.log("Repay transaction completed:", tx);
 
             setStatus("Loan successfully repaid! 🎉");
@@ -254,8 +266,16 @@ export function LoanManager({
             console.error("Repay failed:", error);
             if (error.message.includes("insufficient allowance")) {
                 setError("USDT approval needed. Please try again.");
-            } else {
-                setError(error.message || "Failed to repay loan");
+            }
+            else if (error.message.includes('Loan not active')) {
+                setError('You Are Trying to Repay an INACTIVE loan')
+            }
+            else if (error.message.includes('rejected')) {
+                setError('You Rejected The Repayment tx')
+            }
+            else {
+                // setError(error.message || "Failed to repay loan");
+                console.log('Error: ',  error.message)
             }
         } finally {
             setIsLoading(false);
@@ -312,6 +332,7 @@ export function LoanManager({
                 setError("You don't have permission to liquidate this loan");
             } else {
                 setError(error.message || "Failed to liquidate");
+                console.log('error: ', error.message)
             }
         } finally {
             setIsLoading(false);
@@ -353,12 +374,15 @@ export function LoanManager({
             }
         } catch (error: any) {
             console.error("Withdraw NFT failed:", error);
-            if (error.message.includes('Collateral inactive')){
+            if (error.message.includes('Collateral inactive')) {
                 setError(' Collateral inactive: You Have Already Withdrawn The Selected NFT');
+            } else if (error.message.includes('Loan not repaid')) {
+                setError('Active Loan is yet to e repaid')
             }
             // else if (error.message.includes){}
-            else{
-            setError(error.message || "Failed to withdraw NFT");
+            else {
+                // setError(error.message || "Failed to withdraw NFT");
+                console.log('error: ', error.message)
             }
         } finally {
             setIsLoading(false);
