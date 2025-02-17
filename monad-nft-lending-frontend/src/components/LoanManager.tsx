@@ -207,8 +207,10 @@ export function LoanManager({
                 raw: currentAllowance.toString()
             });
 
+            const interestAmount = '1000000000000000000'
+
             // If current allowance is less than repayment amount, approve the difference plus 1
-            if (currentAllowance.lt(repaymentAmount)) {
+            if (currentAllowance.lt(repaymentAmount.add(interestAmount))) {
                 setStatus('Approving USDT...');
 
                 try {
@@ -218,7 +220,7 @@ export function LoanManager({
                         [LOAN_MANAGER_CONTRACT, ethers.constants.Zero]
                     );
                     // Calculate amount to approve: (repaymentAmount - currentAllowance) + 1
-                    const amountToApprove = repaymentAmount.sub(currentAllowance).add(1);
+                    const amountToApprove = repaymentAmount.add(interestAmount);
                     console.log("Approving additional amount:", {
                         formatted: formatBigNumber(amountToApprove),
                         raw: amountToApprove.toString()
@@ -247,8 +249,8 @@ export function LoanManager({
                 raw: newAllowance.toString()
             });
 
-            if (newAllowance.lt(repaymentAmount)) {
-                setError("USDT approval failed. Please try again.");
+            if (newAllowance.lt(repaymentAmount.add(interestAmount))) {
+                setError("USDT approval failed(insufficient). Please try again.");
                 return;
             }
 

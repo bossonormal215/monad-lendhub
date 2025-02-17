@@ -1,19 +1,11 @@
 "use client"
 import { ThirdwebProvider, ConnectWallet, useAddress, useNetworkMismatch, useSwitchChain, useSDK, useContract } from "@thirdweb-dev/react";
 import { embeddedWallet, metamaskWallet, zerionWallet, coinbaseWallet, walletConnect, rabbyWallet, rainbowWallet } from "@thirdweb-dev/react";
-// import { ThirdwebProvider } from "thirdweb/react";
-// import { MONAD_DEVNET_CONFIG } from "../config/config";
-// import { client } from "../components/client";
-// import { client } from "../components/client";
-// import { ConnectButton } from "thirdweb/react";
-// import { Sepolia } from "@thirdweb-dev/chains";
+
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { useContracts } from "../thirdweb/thirdwebConfig";
 import { NFT_VAULT_CONTRACT } from "../thirdweb/thirdwebConfig";
-// import { sdk } from "../thirdweb/thirdwebConfig";
-// import { USDT_CONTRACT, NFT_VAULT_CONTRACT, LOAN_MANAGER_CONTRACT, LIQUIDATION_MANAGER_CONTRACT } from "../thirdweb/thirdwebConfig";
-// import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WhitelistedNFTs } from '../components/WhitelistedNFTs';
 import { BorrowForm } from '../components/BorrowForm';
 import { LiquidityProvider } from '../components/LiquidityProvider';
@@ -21,7 +13,6 @@ import { LoanManager } from '../components/LoanManager';
 import { DMON_NFT_CONTRACT } from '../contracts/interfaces/dmonNftAbi';
 import { CollateralList } from '@/components/CollateralList';
 
-// const activeChainId = parseInt(MONAD_DEVNET_CONFIG.chainId, 16);
 const activeChain = {
   chainId: 20143, // Replace with actual monad devnet chain ID
   rpc: ['https://rpc-devnet.monadinfra.com/rpc/3fe540e310bbb6ef0b9f16cd23073b0a'],
@@ -37,8 +28,6 @@ const activeChain = {
   name: "Monad Devnet",
 };
 
-// Creating a QueryClient instance
-// const queryClient = new QueryClient();
 
 // function App() {
 function App() {
@@ -188,7 +177,7 @@ function MintDMONPage() {
     try {
       const tx = await dmonContract.call(
         "addToWhitelist",
-        [whitelistAddress]
+        [[whitelistAddress]]
       );
       console.log("Whitelist tx:", tx);
       setAdminStatus(`Added ${whitelistAddress} to whitelist`);

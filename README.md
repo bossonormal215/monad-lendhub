@@ -1,6 +1,83 @@
-# MonadLendHub
+# Monad NFT Lending Platform
 
-A decentralized NFT-collateralized lending protocol built on Monad Network, enabling users to borrow USDT against their NFT collateral.
+A decentralized NFT-collateralized lending protocol built on Monad.
+
+## Team Members
+- Chukwunonso Ikeji (@Codypharm)
+- Stephen Nwankwo (@Melchizedek30)
+- Ibukun Olatunde (@adonormal)
+
+## Features
+- NFT Collateral Deposits
+- USDT Borrowing
+- Liquidity Provision
+- Loan Management
+- Liquidation System
+- Admin Controls
+
+## Getting Started
+
+### Prerequisites
+- Node.js
+- Yarn
+- Monad Devnet Access
+
+### Installation
+```bash
+# Clone the repository
+git clone [your-repo-url]
+
+# Install dependencies
+yarn install
+
+# Start development server
+yarn dev
+```
+
+### Environment Variables
+Create a `.env.local` file:
+```env
+NEXT_PUBLIC_MONAD_RPC=https://rpc-devnet.monadinfra.com/rpc/3fe540e310bbb6ef0b9f16cd23073b0a
+```
+
+## Project Structure
+```
+src/
+├── app/                    # Next.js app directory
+├── components/             # React components
+├── contracts/             # Contract interfaces
+├── thirdweb/             # ThirdWeb configuration
+└── app/whitelistNFTs/    # NFT whitelist configuration
+```
+
+## Smart Contracts
+- NFT Vault: [contract address]
+- Loan Manager: [contract address]
+- Liquidation Manager: [contract address]
+- USDT: [contract address]
+
+## Development Workflow
+1. Create feature branch
+2. Implement changes
+3. Test locally
+4. Create pull request
+5. Code review
+6. Merge to main
+
+## Testing
+```bash
+# Run tests
+yarn test
+```
+
+## Deployment
+```bash
+# Build for production
+yarn build
+
+# Deploy
+yarn deploy
+```
 
 ## Overview
 
@@ -45,40 +122,6 @@ MonadLendHub is a DeFi platform that bridges the liquidity gap between NFTs and 
 - Thirdweb SDK integration
 - Real-time updates using React Query
 - Responsive design with Tailwind CSS
-
-## Getting Started
-
-### Prerequisites
-- Node.js 16+
-- Yarn or npm
-- MetaMask or compatible Web3 wallet
-
-### Installation
-
-### Clone the repository
-```bash
-git clone https://github.com/bossonormal215/monad-nft-lending
-```
-
-### Install dependencies
-```bash
-cd monad-nft-lending
-yarn install
-```
-
-### Run the development server
-```bash
-yarn dev
-```
-
-
-### Configuration
--  Create a `.env.local` file
--  Add required environment variables:
-### env
-- NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_client_id
-- NEXT_PUBLIC_THIRDWEB_SECRET_KEY=your_secret_key
-
 
 ## Usage
 
